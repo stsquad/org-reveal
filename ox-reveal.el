@@ -264,6 +264,14 @@ CONTENTS is nil. NFO is a plist holding contextual information."
           ((string= block-type "HTML")
            (org-remove-indentation block-string)))))
 
+(defun org-html-format-headline-default-function
+  (todo todo-type priority text tags info)
+  "Default format function for a headline.
+See `org-html-format-headline-function' for details."
+  text)
+(setq org-html-format-headline-function 'org-html-format-headline-default-function)
+
+
 (defun org-reveal-headline (headline contents info)
   "Transcode a HEADLINE element from Org to Reveal.
 CONTENTS holds the contents of the headline. INFO is a plist
@@ -283,7 +291,7 @@ holding contextual information."
 	 (priority (and (plist-get info :with-priority)
 			(org-element-property :priority headline)))
 	 ;; Create the headline text.
-	 (full-text (funcall (plist-get info :html-format-headline-function)
+	 (full-text (funcall org-html-format-headline-function
 			     todo todo-type priority text tags info)))
     (cond
      ;; Case 1: This is a footnote section: ignore it.
