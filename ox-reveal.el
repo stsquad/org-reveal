@@ -265,7 +265,7 @@ CONTENTS is nil. NFO is a plist holding contextual information."
            (org-remove-indentation block-string)))))
 
 (defun org-html-format-headline-default-function
-  (todo todo-type priority text tags info)
+  (todo todo-type priority text tags)
   "Default format function for a headline.
 See `org-html-format-headline-function' for details."
   text)
@@ -292,7 +292,7 @@ holding contextual information."
 			(org-element-property :priority headline)))
 	 ;; Create the headline text.
 	 (full-text (funcall org-html-format-headline-function
-			     todo todo-type priority text tags info)))
+			     todo todo-type priority text tags)))
     (cond
      ;; Case 1: This is a footnote section: ignore it.
      ((org-element-property :footnote-section-p headline) nil)
