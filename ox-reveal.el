@@ -493,6 +493,51 @@ using custom variable `org-reveal-root'."
       (format "<script type=\"text/javascript\" src=\"%s\"></script>\n"
               (plist-get info :reveal-mathjax-url))))
 
+(defun org-reveal-script-plugins (info)
+  "Return the necessary fragments for initializing the reveal.js
+plugins."
+  (concat
+   "
+// Optional libraries used to extend on reveal.js
+dependencies: [
+"
+   ;; JS libraries
+   (let* ((builtins
+           '(classList
+             (format " { src: '%slib/js/classList.js', condition: function() { return !document.body.classList; } }" root-path)
+             markdown
+             (format " { src: '%splugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: '%splugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } }" root-path root-path)
+             highlight (format " { src: '%splugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }" root-path)
+             zoom (format " { src: '%splugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
+             notes (format " { src: '%splugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
+             search (format " { src: '%splugin/search/search.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
+             remotes (format " { src: '%splugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
+             multiplex (format " { src: '%s', async: true },\n%s"
+                               (plist-get info :reveal-multiplex-socketio-url)
+                                        ; following ensures that either client.js or master.js is included depending on defva client-multiplex value state
+                               (if (not client-multiplex)
+                                   (progn
+                                     (if (plist-get info :reveal-multiplex-secret)
+                                         (setq client-multiplex t))
+                                     (format " { src: '%splugin/multiplex/master.js', async: true }" root-path))
+                                 (format " { src: '%splugin/multiplex/client.js', async: true }" root-path)))))
+          (builtin-codes
+           (mapcar
+            (lambda (p)
+              (eval (plist-get builtins p)))
+            (let ((buffer-plugins (plist-get info :reveal-plugins)))
+              (cond
+               ((string= buffer-plugins "") ())
+               (buffer-plugins (car (read-from-string buffer-plugins)))
+               (t org-reveal-plugins)))))
+          (extra-codes (plist-get info :reveal-extra-js))
+          (total-codes
+           (if (string= "" extra-codes) builtin-codes
+             (append (list extra-codes) builtin-codes))))
+     (mapconcat 'identity total-codes ",\n"))
+   "]\n"))
+
 (defun org-reveal-scripts (info)
   "Return the necessary scripts for initializing reveal.js using
 custom variable `org-reveal-root'."
@@ -596,49 +641,10 @@ transitionSpeed: '%s',\n"
              (plist-get info :reveal-multiplex-url)))
 
      ;; optional JS library heading
-     (if in-single-file ""
-       (concat
-        "
-// Optional libraries used to extend on reveal.js
-dependencies: [
-"
-        ;; JS libraries
-        (let* ((builtins
-                '(classList
-                  (format " { src: '%slib/js/classList.js', condition: function() { return !document.body.classList; } }" root-path)
-                  markdown (format " { src: '%splugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
- { src: '%splugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } }" root-path root-path)
-                  highlight (format " { src: '%splugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }" root-path)
-                  zoom (format " { src: '%splugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
-                  notes (format " { src: '%splugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
-                  search (format " { src: '%splugin/search/search.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
-                  remotes (format " { src: '%splugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }" root-path)
-                  multiplex (format " { src: '%s', async: true },\n%s"
-                                    (plist-get info :reveal-multiplex-socketio-url)
-                                        ; following ensures that either client.js or master.js is included depending on defva client-multiplex value state
-                                    (if (not client-multiplex)
-                                        (progn
-                                          (if (plist-get info :reveal-multiplex-secret)
-                                              (setq client-multiplex t))
-                                          (format " { src: '%splugin/multiplex/master.js', async: true }" root-path))
-                                      (format " { src: '%splugin/multiplex/client.js', async: true }" root-path)))))
-               (builtin-codes
-                (mapcar
-                 (lambda (p)
-                   (eval (plist-get builtins p)))
-                 (let ((buffer-plugins (plist-get info :reveal-plugins)))
-                   (cond
-                    ((string= buffer-plugins "") ())
-                    (buffer-plugins (car (read-from-string buffer-plugins)))
-                    (t org-reveal-plugins)))))
-               (extra-codes (plist-get info :reveal-extra-js))
-               (total-codes
-                (if (string= "" extra-codes) builtin-codes
-                  (append (list extra-codes) builtin-codes))))
-          (mapconcat 'identity total-codes ",\n"))
-        "]\n"
-        )
-       "\n")
+     (if in-single-file
+         ""
+       (org-reveal-script-plugins info))
+
      "});\n</script>\n")))
 
 (defun org-reveal-toc (depth info)
